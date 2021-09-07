@@ -1,0 +1,450 @@
+.equ KEYBOARD_AD, 0x11400000
+.equ SSEG_AD, 0x110C0000
+.equ VGA_ADDR_AD, 0x11100000
+.equ VGA_COLOR_AD, 0x11140000
+
+
+main:
+	li a0, 1 # flag for when ball can move
+	li a1, 1 # flag for when paddles can move
+	li a2, 0
+	li sp, 0x7D0
+	call draw_start
+	la t0, ISR
+	csrw mtvec, t0
+	li t0, 1
+	csrw mie, t0
+
+loop:
+	j loop # wait for interrupt
+
+ISR:	
+	li t0, KEYBOARD_AD
+	lw t3, 0(t0) # get scancode
+	
+	li t0, 0x1D # W key
+	beq t3, t0, up_1 # player 1 up movement
+	li t0, 0x23 # D key
+	beq t3, t0, down_1 # player 1 down movement
+
+	li t0, 0x44 # O key
+	beq t3, t0, up_2 # player 2 up movement
+	li t0, 0x42 # K key
+	beq t3, t0, down_2 # player 2 down movement
+
+	beqz a2, allow
+	j END
+allow:
+	li t0, 0x5A
+	beq t3, t0, start_game
+	
+	j END # in case wrong key is pressed
+
+END:
+	call move_ball
+	li sp, 0x7D0
+	li t0, 1
+	csrw mie, t0
+	mret
+
+draw_start:
+	li s0, VGA_ADDR_AD
+	li s1, VGA_COLOR_AD
+	li s2, 0xFF
+	
+	# draw left paddle
+	li s3, 0xD80 # column 0, row 27
+	mv t0, s3
+	li t1, 4
+	addi sp, sp, -4
+	sw ra, 0(sp)
+	call draw_paddle
+
+	# draw right paddle
+	li s4, 0xDCF # column 79, row 27
+	mv t0, s4
+	li t1, 4
+	call draw_paddle
+	j done
+
+done:
+	lw ra, 0(sp)
+	addi sp, sp, 4 # delete item from stack
+	ret
+
+draw_paddle:
+	addi sp, sp, -4 
+	sw ra, 0(sp)
+loop1:
+	call draw_pixel
+	beqz t1, done
+	addi t1, t1, -1
+	addi t0, t0, 0x80
+	j loop1
+
+draw_pixel:
+	sw t0, 0(s0) # write address to framebuffer
+	sw s2, 0(s1) # write color to framebuffer
+	ret
+
+up_1:
+	li s10, 0x1F80
+	and t0, s3, s10
+	beq t0, x0, stop_u1
+	beqz a1, next_u1
+	j END
+next_u1:
+	li a0, 0 # flag for allowing ball to move
+	mv t0, s3
+	li s2, 0x00
+	li t1, 4
+	call draw_paddle # erase current paddle
+	li s10, 0x1F80
+	add s3, s3, s10 # go up 1 row
+	li s10, 0x1FFF
+	and s3, s3, s10 # clear potential upper bits
+	mv t0, s3
+	li s2, 0xFF
+	li t1, 4
+	call draw_paddle # draw new paddle
+stop_u1:
+	j END
+
+down_1:
+	li s10, 0x1F80
+	and t0, s3, s10
+	li t1, 0x1B80 # row 55
+	beq t0, t1, stop_d1
+	beqz a1, next_d1
+	j END
+next_d1:
+	li a0, 0 # flag for allowing ball to move
+	mv t0, s3
+	li s2, 0x00
+	li t1, 4
+	call draw_paddle
+	addi s3, s3, 0x80 # go down 1 row
+	li s10, 0x1FFF
+	and s3, s3, s10 # clear potential upper bits
+	mv t0, s3
+	li s2, 0xFF
+	li t1, 4
+	call draw_paddle
+stop_d1:
+	j END
+
+up_2:	
+	li s10, 0x1F80
+	and t0, s4, s10
+	beq t0, x0, stop_u2
+	beqz a1, next_u2
+	j END
+next_u2:
+	li a0, 0 # flag for allowing ball to move
+	mv t0, s4 
+	li s2, 0x00
+	li t1, 4
+	call draw_paddle
+	li s10, 0x1F80
+	add s4, s4, s10 # go up 1 row
+	li s10, 0x1FFF
+	and s4, s4, s10 # clear potential upper bits
+	mv t0, s4
+	li s2, 0xFF
+	li t1, 4
+	call draw_paddle
+stop_u2:
+	j END
+
+down_2:
+	li s10, 0x1F80
+	and t0, s4, s10
+	li t1, 0x1B80 # row 55
+	beq t0, t1, stop_d2
+	beqz a1, next_d2
+	j END
+next_d2:
+	li a0, 0 # flag for allowing ball to move
+	mv t0, s4 
+	li s2, 0x00
+	li t1, 4
+	call draw_paddle
+	addi s4, s4, 0x80 # down 1 row
+	li s10, 0x1FFF
+	and s4, s4, s10 # clear potential upper bits
+	mv t0, s4
+	li s2, 0xFF
+	li t1, 4
+	call draw_paddle
+stop_d2:
+	j END
+
+start_game:
+	li a1, 0 # allow paddles to move
+	li a2, 1
+	call draw_start
+	li s5, 0x28 # ball current col adr
+	li s6, 0xF00 # ball current row adr
+	li s7, 0x29 # ball prev col adr
+	li s8, 0xF80 # ball prev row adr
+	add t0, s5, s6 # ball should travel up and left to start
+	call draw_pixel
+	j END
+
+move_ball:
+	beqz a0, continue
+	ret
+continue:
+	addi sp, sp, -4
+	sw ra, 0(sp)
+
+	xori s7, s7, 0x7F
+	addi s7, s7, 1 # 2's comp of prev col
+	andi s7, s7, 0x7F # clear carry bits
+
+	li s10, 0x1F80
+	xor s8, s8, s10
+	addi s8, s8, 0x80 # 2's comp of prev row
+	and s8, s8, s10
+
+	add t0, s5, s7 # change in cols
+	andi t0, t0, 0x7F # clear carry bits
+	add t1, s6, s8 # change in rows
+	li s10, 0x1F80
+	and t1, t1, s10 # clear potential upper bits
+
+	add s9, t0, t1 # change in adr
+	li s10, 0x1FFF
+	and s9, s9, s10 # clear upper bits
+
+	li t0, 0x81 # ball travelling down and right
+	li t1, 0xFF # ball travelling down and left
+	li t2, 0x1F81 # ball travelling up and right
+	li t3, 0x1FFF # ball travelling up and left
+
+	beq s9, t0, down_right
+	beq s9, t1, down_left
+	beq s9, t2, up_right
+	beq s9, t3, up_left
+
+	
+down_left:
+	li s10, 1 # col 1
+	beq s5, s10, check_left # check for paddle contact
+	li s10, 0x1D80 # row 59
+	beq s6, s10, deflect # check for floor contact
+
+	mv s7, s5
+	mv s8, s6 # store prev ball adr
+
+	addi s5, s5, -1 # decrement col
+	andi s5, s5, 0x7F # clear carry bits
+
+	addi s6, s6, 0x80 # increment row
+	li s10, 0x1F80
+	and s6, s6, s10 # clear potential upper bits
+
+	li s2, 0x00
+	add t0, s7, s8
+	call draw_pixel # erase prev ball location
+	li s2, 0xFF
+	add t0, s5, s6
+	call draw_pixel # draw new ball location
+	j done
+
+down_right:
+	li s10, 78 # col 78
+	beq s5, s10, check_right # check for paddle contact
+	li s10, 0x1D80 # row 59
+	beq s6, s10, deflect # check for floor contact
+	mv s7, s5
+	mv s8, s6 # store prev ball adr
+
+	addi s5, s5, 1 # increment col
+	andi s5, s5, 0x7F # clear carry bits
+
+	addi s6, s6, 0x80 # increment row
+	li s10, 0x1F80
+	and s6, s6, s10 # clear potential upper bits
+
+	li s2, 0x00
+	add t0, s7, s8
+	call draw_pixel # erase prev ball location
+	li s2, 0xFF
+	add t0, s5, s6
+	call draw_pixel # draw new ball location
+	j done
+
+up_left:
+	li s10, 1 # col 1
+	beq s5, s10, check_left # check for paddle contact
+	beq s6, x0, deflect # check for ceiling contact
+
+	mv s7, s5
+	mv s8, s6 # store prev ball adr
+
+	addi s5, s5, -1 # decrement col
+	andi s5, s5, 0x7F
+	
+	li s10, 0x1F80
+	add s6, s6, s10 # decrement row
+	and s6, s6, s10 # clear potential upper bits
+
+	li s2, 0x00
+	add t0, s7, s8
+	call draw_pixel # erase prev ball location
+	li s2, 0xFF
+	add t0, s5, s6
+	call draw_pixel
+	j done
+
+up_right:
+	li s10, 78 # col 78
+	beq s5, s10, check_right # check for paddle contact
+	beq s6, x0, deflect # check for ceiling contact
+
+	mv s7, s5
+	mv s8, s6 # store prev ball adr
+
+	addi s5, s5, 1 # increment col
+	andi s5, s5, 0x7F
+
+	li s10, 0x1F80
+	add s6, s6, s10 # decrement row
+	and s6, s6, s10 # clear potential upper bits
+	
+	li s2, 0x00
+	add t0, s7, s8
+	call draw_pixel # erase prev ball location
+	li s2, 0xFF
+	add t0, s5, s6
+	call draw_pixel # draw new ball location
+	j done
+
+# check if ball hits right paddle
+check_right:         # s6 (row of ball) isn't being cleared somewhere
+	li s10, 0x1F80
+	and t0, s4, s10
+	bge s6, t0, check_right_2
+	j P1_score
+check_right_2:
+	addi t0, t0, 0x280 # increment paddle row by 5
+	and t0, t0, s10
+	blt s6, t0, bounce
+	j P1_score
+
+# check if ball hits left paddle
+check_left:
+	li s10, 0x1F80
+	and t0, s3, s10
+	bge s6, t0, check_left_2
+	j P2_score
+check_left_2:
+	addi t0, t0, 0x280
+	and t0, t0, s10
+	blt s6, t0, bounce
+	j P2_score
+
+# bounce off paddle 45 degrees
+bounce:
+	mv s7, s5
+	mv s8, s6 # store prev ball adr
+
+	li s10, 0x1F80
+	and t1, s9, s10 # clear column bits
+
+	xori t0, s9, 0x7F
+	addi t0, t0, 1 # invert change in cols
+	andi t0, t0, 0x7F # clear carry bits
+
+	add s5, s5, t0 # get new column
+	andi s5, s5, 0x7F # clear carry bits
+	add s6, s6, t1 # get new row
+	and s6, s6, s10 # clear potential upper bits
+	
+	li s2, 0x00
+	add t0, s7, s8
+	call draw_pixel # erase prev ball location
+	li s2, 0xFF
+	add t0, s5, s6
+	call draw_pixel
+	j done
+
+
+# deflect off ceiling 45 degrees
+deflect:
+	mv s7, s5
+	mv s8, s6 # store prev ball adr
+
+	li s10, 0x1F80
+	andi t1, s9, 0x7F # clear row bits
+	xor t0, s9, s10
+	addi t0, t0, 0x80 # twos complement
+	and t0, t0, s10 # clear col bits
+
+	add s5, s5, t1 # get new column
+	andi s5, s5, 0x7F # clear carry bits
+	add s6, s6, t0 # get new row	
+	and s6, s6, s10 # clear potential upper bits
+
+	li s2, 0x00
+	add t0, s7, s8
+	call draw_pixel # erase prev ball location
+	li s2, 0xFF
+	add t0, s5, s6
+	call draw_pixel
+	j done
+
+P1_score:
+	li s10, 0x1000
+	add s11, s11, s10 ##################
+	li t0, SSEG_AD
+	sw s11, 0(t0) # update player 1 score
+	li t1, 0x9000
+	li s10, 0xF000
+	and t2, s11, s10 ###################
+	beq t1, t2, NEW_GAME
+	call RST_GAME
+	j done
+	
+P2_score:
+	addi s11, s11, 0x1
+	li t0, SSEG_AD
+	sw s11, 0(t0) # update player 2 score
+	li t1, 0x0009
+	andi t2, s11, 0xF 
+	beq t1, t2, NEW_GAME
+	call RST_GAME
+	j done
+
+RST_GAME:
+	li a1, 1 # paddles not allowed to move
+	li a0, 1 # ball not allowed to move
+	li a2, 0 # enter key re-enabled
+	li t0, 0 # position
+	li t2, 79 # col 79
+	li t3, 0x1D80 # row 59
+	li s2, 0x00 # black
+clear_row:
+	call draw_pixel
+	andi t1, t0, 0x7F # clear row bits
+	beq t1, t2, next_row
+	addi t0, t0, 1
+	j clear_row
+next_row:	
+	li s10, 0x1F80
+	and t0, t0, s10 # reset column count    ################
+	beq t0, t3, done
+	addi t0, t0, 0x80 # increment row 
+	j clear_row
+
+NEW_GAME:
+	li s11, 0 # reset player scores
+	li t0, SSEG_AD
+	sw s11, 0(t0)
+	call RST_GAME
+	j done
+	
+	
+	
+	
