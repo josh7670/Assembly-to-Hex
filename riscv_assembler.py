@@ -380,6 +380,8 @@ for i in range(0,len(instr_arr)):
                 imm = str(bin(int(instruction[3][2:], 16)))[2:].zfill(12)
             else:
                 imm = str(bin(int(instruction[3])))[2:].zfill(12)
+        if (len(imm) > 12):
+            raise ValueError("Instruction %d: Immediate Value must not exceed 12 bits." % PC_cnt)
         funct3 = '000'
         opcode = '0010011'
         mem_line = imm + registers[rs1] + funct3 + registers[rd] + opcode
@@ -392,6 +394,8 @@ for i in range(0,len(instr_arr)):
             imm = str(bin(int(instruction[3][2:], 16)))[2:].zfill(12)
         else:
             imm = str(bin(int(instruction[3])))[2:].zfill(12)
+        if (len(imm) > 12):
+            raise ValueError("Instruction %d: Immediate Value must not exceed 12 bits." % PC_cnt)
         funct3 = '010'
         opcode = '0010011'
         mem_line = imm + registers[rs1] + funct3 + registers[rd] + opcode
@@ -404,6 +408,8 @@ for i in range(0,len(instr_arr)):
             imm = str(bin(int(instruction[3][2:], 16)))[2:].zfill(12)
         else:
             imm = str(bin(int(instruction[3])))[2:].zfill(12)
+        if (len(imm) > 12):
+            raise ValueError("Instruction %d: Immediate Value must not exceed 12 bits." % PC_cnt)
         funct3 = '011'
         opcode = '0010011'
         mem_line = imm + registers[rs1] + funct3 + registers[rd] + opcode
@@ -416,6 +422,8 @@ for i in range(0,len(instr_arr)):
             imm = str(bin(int(instruction[3][2:], 16)))[2:].zfill(12)
         else:
             imm = str(bin(int(instruction[3])))[2:].zfill(12)
+        if (len(imm) > 12):
+            raise ValueError("Instruction %d: Immediate Value must not exceed 12 bits." % PC_cnt)
         funct3 = '100'
         opcode = '0010011'
         mem_line = imm + registers[rs1] + funct3 + registers[rd] + opcode
@@ -428,6 +436,8 @@ for i in range(0,len(instr_arr)):
             imm = str(bin(int(instruction[3][2:], 16)))[2:].zfill(12)
         else:
             imm = str(bin(int(instruction[3])))[2:].zfill(12)
+        if (len(imm) > 12):
+            raise ValueError("Instruction %d: Immediate Value must not exceed 12 bits." % PC_cnt)
         funct3 = '110'
         opcode = '0010011'
         mem_line = imm + registers[rs1] + funct3 + registers[rd] + opcode
@@ -440,6 +450,8 @@ for i in range(0,len(instr_arr)):
             imm = str(bin(int(instruction[3][2:], 16)))[2:].zfill(12)
         else:
             imm = str(bin(int(instruction[3])))[2:].zfill(12)
+        if (len(imm) > 12):
+            raise ValueError("Instruction %d: Immediate Value must not exceed 12 bits." % PC_cnt)
         funct3 = '111'
         opcode = '0010011'
         mem_line = imm + registers[rs1] + funct3 + registers[rd] + opcode
@@ -452,6 +464,8 @@ for i in range(0,len(instr_arr)):
             imm = str(bin(int(instruction[3][2:], 16)))[2:].zfill(12)
         else:
             imm = str(bin(int(instruction[3])))[2:].zfill(12)
+        if (len(imm) > 12):
+            raise ValueError("Instruction %d: Immediate Value must not exceed 12 bits." % PC_cnt)
         funct3 = '001'
         funct7 = '0000000'
         opcode = '0010011'
@@ -465,6 +479,8 @@ for i in range(0,len(instr_arr)):
             imm = str(bin(int(instruction[3][2:], 16)))[2:].zfill(12)
         else:
             imm = str(bin(int(instruction[3])))[2:].zfill(12)
+        if (len(imm) > 12):
+            raise ValueError("Instruction %d: Immediate Value must not exceed 12 bits." % PC_cnt)
         funct3 = '101'
         funct7 = '0000000'
         opcode = '0010011'
@@ -478,6 +494,8 @@ for i in range(0,len(instr_arr)):
             imm = str(bin(int(instruction[3][2:], 16)))[2:].zfill(12)
         else:
             imm = str(bin(int(instruction[3])))[2:].zfill(12)
+        if (len(imm) > 12):
+            raise ValueError("Instruction %d: Immediate Value must not exceed 12 bits." % PC_cnt)
         funct3 = '101'
         funct7 = '0100000'
         opcode = '0010011'
